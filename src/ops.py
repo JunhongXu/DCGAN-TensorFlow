@@ -27,14 +27,15 @@ def conv2d(x, num_kernels, kernel_h=5, kernel_w=5, strides=2, padding="VALID", n
     return y
 
 
-def transpose_conv2d(x, num_kernels, new_h, new_w, kernel_h=5, activation=tf.nn.relu, kernel_w=5, stride=2,
-                     padding="VALID", use_bn=True, is_train=True, stddv=0.02, name="transpose_conv2d"):
+def transpose_conv2d(x, output_shape, kernel_h=5, kernel_w=5, activation=tf.nn.relu, stride=2, padding="VALID",
+                     use_bn=True, is_train=True, stddv=0.02, name="transpose_conv2d"):
     n, h, w, c = x.get_shape().as_list()
+    num_kernels = output_shape[-1]
     with tf.variable_scope(name):
         w = tf.get_variable(name="weight", initializer=tf.truncated_normal_initializer(stddev=stddv),
                             shape=(kernel_h, kernel_w, num_kernels, c))
         bias = tf.get_variable(name="bias", initializer=tf.constant_initializer(0.01), shape=num_kernels)
-        y = tf.nn.conv2d_transpose(x, w, output_shape=(-1, new_h, new_w, num_kernels), padding=padding,
+        y = tf.nn.conv2d_transpose(x, w, output_shape=output_shape, padding=padding,
                                    strides=(1, stride, stride, 1))
         y = tf.nn.bias_add(y, bias)
         if use_bn:
