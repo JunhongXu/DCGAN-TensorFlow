@@ -1,19 +1,12 @@
 import tensorflow as tf
 from src.ops import *
 
+
 class DCGAN(object):
     """
     An implementation of DCGAN
     """
-    def __init__(self, input_dim=(64, 64, 3), z_dim=100, batch_size=64, lr=1e-4, init_num_kernels=64):
-        """
-        Parameters:
-            input_dim: a tuple of (H, W, C) of input image shape to the discriminator
-                or output image shape of the generator
-            z_dim: generator input dimension
-            batch_size: int
-            lr: learning rate
-        """
+    def __init__(self, sess, input_dim=(64, 64, 3), z_dim=100, batch_size=64, lr=1e-4, init_num_kernels=64):
 
         # model parameters
         self.input_dim = input_dim
@@ -36,12 +29,21 @@ class DCGAN(object):
         # the probability of input is from fake data
         self.D2 = self.discriminator(self.G, reuse=True, is_train=True)
 
-        self.g_params = [param for param in tf.trainable_variables() if 'generator' in param]
-        self.d_params = [param for param in tf.trainable_variables() if 'discriminator' in param]
+        # generator at inference time
+        self.G_inference = self.generator(self.z, reuse=True, is_train=False)
+
+        self.g_params = [param for param in tf.trainable_variables() if 'generator' in param.name]
+        self.d_params = [param for param in tf.trainable_variables() if 'discriminator' in param.name]
 
         # build the whole model and loss
         self.fake_data_loss, self.real_data_loss, self.generator_loss, self.d_optimizer, self.g_optimizer = self.build()
 
+        # summary writer
+        writer = tf.summary.FileWriter(logdir="log", graph=sess.graph)
+        # summary of generator
+        self.g_summary = tf.summary.scalar(name="g/loss", tensor=self.generator_loss)
+        # summary of discriminator
+        self.d_summary = tf.summary.merge()
     def discriminator(self, inpt, reuse, is_train):
         """
         Build D for training or testing. If reuse if True, the input should be the output of generator
@@ -72,10 +74,14 @@ class DCGAN(object):
                               name="dense_input", use_bn=True, is_train=is_train)
             # reshape the output of dense layer to be H/16, W/16, K*8
             net = tf.reshape(net, (-1, h//16, w//16, self.init_num_kernels*8))
-            net = transpose_conv2d(net, self.init_num_kernels*4, h//8, w//8, name="trans_conv1", is_train=is_train)
-            net = transpose_conv2d(net, self.init_num_kernels*2, h//4, w//4, name="trans_conv2", is_train=is_train)
-            net = transpose_conv2d(net, self.init_num_kernels, h//2, w//2, name="trans_conv3", is_train=is_train)
-            net = transpose_conv2d(net, c, h, w, name="trans_conv4", is_train=is_train, activation=tf.nn.tanh)
+            net = transpose_conv2d(net, self.init_num_kernels*4, h//8, w//8, name="trans_conv1", is_train=is_train,
+                                   padding="SAME")
+            net = transpose_conv2d(net, self.init_num_kernels*2, h//4, w//4, name="trans_conv2", is_train=is_train,
+                                   padding="SAME")
+            net = transpose_conv2d(net, self.init_num_kernels, h//2, w//2, name="trans_conv3", is_train=is_train,
+                                   padding="SAME")
+            net = transpose_conv2d(net, c, h, w, name="trans_conv4", is_train=is_train, activation=tf.nn.tanh,
+                                   padding="SAME")
         return net
 
     def build(self):
@@ -94,6 +100,5 @@ class DCGAN(object):
             g_optimize = g_optimizer.minimize(g_loss, var_list=self.g_params)
         return fake_data_loss, real_data_loss, g_loss, d_optimize, g_optimize
 
-
-if __name__ == '__main__':
-    DCGAN()
+    def train(self, data, batch_size):
+        pass
