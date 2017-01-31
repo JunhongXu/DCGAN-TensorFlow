@@ -162,8 +162,8 @@ class DCGAN(object):
             self.writer.add_summary(g_summary, global_step=step)
 
             if step % 10 == 0:
-                print("G loss is %s, fake data loss is %s, real data loss is %s, D loss is %s"
-                      % (g_loss, d2_loss, d1_loss, d2_loss+d1_loss))
+                print("[*]%s/%s: G loss is %s, fake data loss is %s, real data loss is %s, D loss is %s"
+                      % (step, max_iter, g_loss, d2_loss, d1_loss, d2_loss+d1_loss))
 
             if step % test_every == 0:
                 z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
