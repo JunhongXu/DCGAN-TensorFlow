@@ -47,7 +47,7 @@ def transpose_conv2d(x, output_shape, kernel_h=5, kernel_w=5, activation=tf.nn.r
     return activation(y)
 
 
-def dense_layer(x, num_neurons, name, activation, use_bn=False, is_train=True):
+def dense_layer(x, num_neurons, name, activation, use_bn=False, is_train=True, stddv=0.02):
     if len(x.get_shape().as_list()) > 2:
         n, h, w, c = x.get_shape().as_list()
         d = h * w * c
@@ -56,7 +56,7 @@ def dense_layer(x, num_neurons, name, activation, use_bn=False, is_train=True):
     with tf.variable_scope(name):
         # flatten x
         x = tf.reshape(x, (-1, d))
-        w = tf.get_variable("weight", shape=(d, num_neurons), initializer=tf.random_normal_initializer(stddev=0.02))
+        w = tf.get_variable("weight", shape=(d, num_neurons), initializer=tf.random_normal_initializer(stddev=stddv))
         b = tf.get_variable("bias", shape=num_neurons, initializer=tf.constant_initializer(0.01))
         y = tf.matmul(x, w) + b
         if use_bn:

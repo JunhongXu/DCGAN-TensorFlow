@@ -1,4 +1,5 @@
 import tensorflow as tf
+import os
 from src.ops import *
 import numpy as np
 from scipy.misc import imsave
@@ -8,17 +9,21 @@ class DCGAN(object):
     """
     An implementation of DCGAN
     """
-    def __init__(self, sess, input_dim=(64, 64, 3), z_dim=100, lr=0.0002, batch_size=128, g_init=128, d_init=64):
+    def __init__(self, sess, name, input_dim=(64, 64, 3), z_dim=100, lr=0.0002, batch_size=128, restore=True,
+                 g_init=128, d_init=64, stddv=0.02):
 
         # model parameters
         self.input_dim = input_dim
+        self.H, self.W, self.C = input_dim
         self.z_dim = z_dim
         self.lr = lr
         self.g_init = g_init
         self.d_init = d_init
         self.sess = sess
         self.batch_size= batch_size
-
+        self.name = name
+        self.stddv = stddv
+        self.dir = os.path.join(name, str(input_dim), str(batch_size), str(g_init), str(d_init))
         # input to D
         self.x = tf.placeholder(dtype=tf.float32, shape=(batch_size, ) + input_dim, name="x")
 
@@ -43,7 +48,7 @@ class DCGAN(object):
         self.fake_data_loss, self.real_data_loss, self.generator_loss, self.d_optimizer, self.g_optimizer = self.build()
 
         # summary writer
-        self.writer = tf.summary.FileWriter(logdir="log", graph=sess.graph)
+        self.writer = tf.summary.FileWriter(logdir=os.path.join("log", self.dir), graph=sess.graph)
         # summary of generator
         self.g_summary = tf.summary.scalar(name="g/loss", tensor=self.generator_loss)
         # summary of discriminator
@@ -54,6 +59,30 @@ class DCGAN(object):
 
         self.sess.run(tf.global_variables_initializer())
 
+        self.saver = tf.train.Saver()
+
+        if restore:
+            self._reload()
+
+    def _save(self):
+        # check if the path exists
+        checkpoint = os.path.join("checkpoint", self.dir)
+        if not os.path.exists(checkpoint):
+            os.makedirs(checkpoint)
+        self.saver.save(self.sess, os.path.join(checkpoint, "%s.ckpt" % self.name))
+        print("[*]Save completed!")
+
+    def _reload(self):
+        print("[*]Restoring the model...")
+        checkpoint = os.path.join("checkpoint", self.dir)
+        ckpt = tf.train.get_checkpoint_state(checkpoint)
+        if ckpt and ckpt.model_checkpoint_path:
+            ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
+            self.saver.restore(self.sess, os.path.join(checkpoint, ckpt_name))
+            print("[*]Restore the model %s successfully!" % ckpt_name)
+        else:
+            print("[!]Did not restore the model ")
+
     def discriminator(self, inpt, reuse, is_train):
         """
         Build D for training or testing. If reuse if True, the input should be the output of generator
@@ -62,14 +91,15 @@ class DCGAN(object):
             if reuse:
                 tf.get_variable_scope().reuse_variables()
             net = conv2d(x=inpt, num_kernels=self.d_init, name="conv1", activation=lkrelu, padding="SAME",
-                         alpha=0.02, is_train=is_train)
+                         alpha=0.02, is_train=is_train, stddv=self.stddv)
             net = conv2d(x=net, num_kernels=self.d_init*2, name="conv2", activation=lkrelu, padding="SAME",
-                         alpha=0.02, is_train=is_train)
+                         alpha=0.02, is_train=is_train, stddv=self.stddv)
             net = conv2d(x=net, num_kernels=self.d_init*4, name="conv3", activation=lkrelu, padding="SAME",
-                         alpha=0.02, is_train=is_train)
+                         alpha=0.02, is_train=is_train, stddv=self.stddv)
             net = conv2d(x=net, num_kernels=self.d_init*8, name="conv4", activation=lkrelu, padding="SAME",
-                         alpha=0.02, is_train=is_train)
-            net = dense_layer(x=net, num_neurons=1, name="output", activation=tf.identity, is_train=is_train)
+                         alpha=0.02, is_train=is_train, stddv=self.stddv)
+            net = dense_layer(x=net, num_neurons=1, name="output", activation=tf.identity, is_train=is_train,
+                              stddv=self.stddv)
         return net
 
     def generator(self, inpt, reuse, is_train):
@@ -81,17 +111,17 @@ class DCGAN(object):
             if reuse:
                 tf.get_variable_scope().reuse_variables()
             net = dense_layer(inpt, self.g_init*h**2/32, activation=tf.nn.relu,
-                              name="dense_input", use_bn=True, is_train=is_train)
+                              name="dense_input", use_bn=True, is_train=is_train, stddv=self.stddv)
             # reshape the output of dense layer to be H/16, W/16, K*8
             net = tf.reshape(net, (-1, h//16, w//16, self.g_init*8))
             net = transpose_conv2d(net, (self.batch_size, h//8, w//8, self.g_init*4), name="trans_conv1",
-                                   is_train=is_train, padding="SAME")
+                                   is_train=is_train, padding="SAME", stddv=self.stddv)
             net = transpose_conv2d(net, (self.batch_size, h//4, w//4, self.g_init*2), is_train=is_train,
-                                   padding="SAME")
+                                   padding="SAME", stddv=self.stddv)
             net = transpose_conv2d(net, (self.batch_size, h//2, w//2, self.g_init), name="trans_conv3",
-                                   is_train=is_train, padding="SAME")
+                                   is_train=is_train, padding="SAME", stddv=self.stddv)
             net = transpose_conv2d(net, (self.batch_size, h, w, c), name="trans_conv4", is_train=is_train,
-                                   activation=tf.nn.tanh, padding="SAME")
+                                   activation=tf.nn.tanh, padding="SAME", stddv=self.stddv)
         return net
 
     def build(self):
@@ -111,7 +141,7 @@ class DCGAN(object):
         return fake_data_loss, real_data_loss, g_loss, d_optimize, g_optimize
 
     def train(self, data, max_epoch, test_every=100):
-        N, H, W, C = data.shape
+        N = data.shape[0]
         iter_per_epoch = N//self.batch_size
         max_iter = iter_per_epoch * max_epoch
 
@@ -138,7 +168,19 @@ class DCGAN(object):
             if step % test_every == 0:
                 z = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
                 # test and save image
-                fake_image = self.sess.run(self.G_inference, feed_dict={self.z: z})
-                fake_image = np.reshape(fake_image, (self.batch_size, H, W, C))
-                imsave("image/%s.png" % step, fake_image[0].reshape(H, W))
+                fake_image = self.sample(z)
+                fake_image = np.reshape(fake_image, (self.batch_size, self.H, self.W, self.C))
+                index = np.random.randint(0, self.batch_size)
+                if self.C == 1:
+                    imsave("image/%s.png" % step, fake_image[index].reshape(self.H, self.W))
+                else:
+                    imsave("image/%s.png" % step, fake_image[index].reshape(self.H, self.W, self.C))
                 print("Image Saved")
+                self._save()
+
+    def sample(self, z):
+        """
+        Sample results from a z variable.
+        """
+        samples = self.sess.run(self.G_inference, feed_dict={self.z: z})
+        return samples
