@@ -18,15 +18,25 @@ Other dataset will be implemented in the future)
 
 Generator's Loss:
 
-![g_loss]()
+![g_loss](misc/g_loss.png)
 
 Discriminator's Fake Data Loss:
 
-![fake_loss]()
+![fake_loss](misc/fake_data_loss.png)
 
 Discriminator's Real Data Loss:
 
-![real_loss]()
+![real_loss](misc/real_data_loss.png)
+
+Discriminator's Loss:
+
+![d_loss](misc/d_loss.png)
+
+
+Generated Numbers:
+
+![mnist_generated](misc/generated_mnist.png)
+
 
 #### Reference
 
