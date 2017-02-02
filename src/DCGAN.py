@@ -24,6 +24,11 @@ class DCGAN(object):
         self.name = name
         self.stddv = stddv
         self.dir = os.path.join(name, str(input_dim), str(batch_size), str(g_init), str(d_init))
+        self.imsave_dir = os.path.join("image", name)
+
+        if not os.path.exists(self.imsave_dir):
+            os.makedirs(self.imsave_dir)
+
         # input to D
         self.x = tf.placeholder(dtype=tf.float32, shape=(batch_size, ) + input_dim, name="x")
 
@@ -172,9 +177,10 @@ class DCGAN(object):
                 fake_image = np.reshape(fake_image, (self.batch_size, self.H, self.W, self.C))
                 index = np.random.randint(0, self.batch_size)
                 if self.C == 1:
-                    imsave("image/%s.png" % step, fake_image[index].reshape(self.H, self.W))
+                    imsave(os.path.join(self.imsave_dir, "%s.png" % step), fake_image[index].reshape(self.H, self.W))
                 else:
-                    imsave("image/%s.png" % step, fake_image[index].reshape(self.H, self.W, self.C))
+                    imsave(os.path.join(self.imsave_dir, "%s.png" % step),
+                           fake_image[index].reshape(self.H, self.W, self.C))
                 print("Image Saved")
                 self._save()
 
