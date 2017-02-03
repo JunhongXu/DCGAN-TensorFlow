@@ -3,7 +3,7 @@ import os
 from src.ops import *
 import numpy as np
 from scipy.misc import imsave
-
+from src.utilities import recover_img
 
 class DCGAN(object):
     """
@@ -180,7 +180,7 @@ class DCGAN(object):
                     imsave(os.path.join(self.imsave_dir, "%s.png" % step), fake_image[index].reshape(self.H, self.W))
                 else:
                     imsave(os.path.join(self.imsave_dir, "%s.png" % step),
-                           fake_image[index].reshape(self.H, self.W, self.C))
+                           recover_img(fake_image[index].reshape(self.H, self.W, self.C)))
                 print("Image Saved")
                 self._save()
 
