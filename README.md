@@ -35,7 +35,7 @@ Generated Numbers:
 
 Generator's Loss:
 
-![celeba_g_loss](misc/celeb_d_loss.png)
+![celeba_g_loss](misc/celeb_g_loss.png)
 
 Discriminator's loss:
 
