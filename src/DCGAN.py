@@ -4,6 +4,8 @@ from src.ops import *
 import numpy as np
 from scipy.misc import imsave
 from src.utilities import recover_img
+from matplotlib import pyplot as plt
+
 
 class DCGAN(object):
     """
@@ -190,3 +192,29 @@ class DCGAN(object):
         """
         samples = self.sess.run(self.G_inference, feed_dict={self.z: z})
         return samples
+
+    def evaluate(self):
+        """
+        Evaluate the model after training and save images into image/name/test folder
+        """
+        eval_save_dir = os.path.join(self.imsave_dir, "test")
+        samples = self.sample(np.random.uniform(-1, 1, (self.batch_size, self.z_dim)))
+        if not os.path.exists(eval_save_dir):
+            os.makedirs(eval_save_dir)
+        # save images
+        for index, sample in enumerate(samples):
+            if self.C == 1:
+                imsave(os.path.join(eval_save_dir, "%s.png" % index), samples[index].reshape(self.H, self.W))
+            else:
+                imsave(os.path.join(eval_save_dir, "%s.png" % index),
+                       recover_img(samples[index].reshape(self.H, self.W, self.C)))
+
+        # display some images
+        row, col = 4, 4
+        random_index = np.random.randint(0, self.batch_size, size=row * col)
+        for i in range(row*col):
+            plt.subplot(row, col, i+1)
+            plt.imshow(recover_img(samples[random_index[i]].reshape(self.H, self.W, self.C))
+                       , cmap="gray" if self.C==1 else None)
+            plt.gca().axis("off")
+        plt.show()

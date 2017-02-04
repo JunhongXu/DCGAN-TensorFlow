@@ -100,17 +100,20 @@ def maybe_download(path_to_save, file_name, url=None):
         Check if the data file exists. If it does, extract the file. If it does not, download and extracts the file.
     """
     file_path = os.path.join(path_to_save, file_name)
-
-    if not os.path.exists(file_path):
-        # download
-        os.makedirs(path_to_save)
-        _download_file(url, file_path)
-    # extract file
-    with zipfile.ZipFile(file_path) as zf:
-        print("Extracting data...")
-        zf.extractall(path_to_save)
-        print("Finished...")
-    os.remove(file_path)
+    # check if the data has already been extracted
+    if os.path.exists(os.path.join(path_to_save, 'img_align_celeba')):
+        print("img_align_celeba dataset has already been extracted. Please run main.py -celebA")
+    else:
+        if not os.path.exists(file_path):
+            # download
+            os.makedirs(path_to_save)
+            _download_file(url, file_path)
+        # extract file
+        with zipfile.ZipFile(file_path) as zf:
+            print("Extracting data...")
+            zf.extractall(path_to_save)
+            print("Finished...")
+        os.remove(file_path)
 
 
 if __name__ == '__main__':

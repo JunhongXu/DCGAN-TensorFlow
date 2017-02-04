@@ -20,13 +20,6 @@ Generator's Loss:
 
 ![g_loss](misc/g_loss.png)
 
-Discriminator's Fake Data Loss:
-
-![fake_loss](misc/fake_data_loss.png)
-
-Discriminator's Real Data Loss:
-
-![real_loss](misc/real_data_loss.png)
 
 Discriminator's Loss:
 
